@@ -49,9 +49,24 @@ function updateElapsedDisplay() {
     workingSinceElement.textContent = `Started ${startTime} · ${elapsed} elapsed`;
     workingSinceElement.classList.remove('hidden');
 
-    const ongoingBadge = sessionsListElement.querySelector('.ongoing-duration-badge');
-    if (ongoingBadge) {
-        ongoingBadge.textContent = elapsed;
+    const todayRow = sessionsListElement.querySelector('[data-today-row]');
+    if (!todayRow) {
+        return;
+    }
+
+    const baseMinutes = Number(todayRow.dataset.baseMinutes) || 0;
+    const elapsedMinutes = getElapsedMinutes(activeClockInTimestamp);
+    const totalMinutes = baseMinutes + elapsedMinutes;
+    const maxMinutes = Number(sessionsListElement.dataset.maxMinutes) || 0;
+
+    const fill = todayRow.querySelector('.week-bar-fill');
+    if (fill) {
+        fill.style.width = maxMinutes ? `${Math.min(100, (totalMinutes / maxMinutes) * 100)}%` : '0%';
+    }
+
+    const durationEl = todayRow.querySelector('.week-day-duration');
+    if (durationEl) {
+        durationEl.textContent = totalMinutes > 0 ? formatDuration(totalMinutes) : '--';
     }
 }
 
@@ -94,6 +109,67 @@ function updateGoalLabel() {
     const settings = settingsService.getSettings();
     const periodLabel = settings.progressPeriod === 'daily' ? 'DAILY' : 'WEEKLY';
     goalLabelElement.textContent = `${periodLabel} GOAL: ${settings.goalHours}H`;
+}
+
+function buildWeekChartRows(weekSummary, isClockedIn) {
+    const weekStart = timeTrackingService.getWeekStartDate();
+    const todayKey = timeTrackingService.toLocalDateKey(new Date());
+    const rows = [];
+
+    for (let i = 0; i < 7; i++) {
+        const date = new Date(weekStart);
+        date.setDate(weekStart.getDate() + i);
+        const dateKey = timeTrackingService.toLocalDateKey(date);
+        const isToday = dateKey === todayKey;
+        const baseMinutes = weekSummary.get(dateKey)?.totalMinutes ?? 0;
+        let totalMinutes = baseMinutes;
+
+        if (isToday && isClockedIn && activeClockInTimestamp !== null) {
+            totalMinutes += getElapsedMinutes(activeClockInTimestamp);
+        }
+
+        rows.push({
+            dateKey,
+            label: date.toLocaleDateString('en-US', { weekday: 'short' }),
+            totalMinutes,
+            baseMinutes,
+            isToday,
+        });
+    }
+
+    const maxMinutes = Math.max(0, ...rows.map(row => row.totalMinutes));
+    return { rows, maxMinutes };
+}
+
+function renderWeeklyActivityChart(weekSummary, isClockedIn) {
+    const { rows, maxMinutes } = buildWeekChartRows(weekSummary, isClockedIn);
+
+    sessionsListElement.innerHTML = '';
+    sessionsListElement.className = 'space-y-2.5 w-full flex-1';
+    sessionsListElement.dataset.maxMinutes = String(maxMinutes);
+
+    rows.forEach(row => {
+        const barWidth = maxMinutes ? Math.min(100, (row.totalMinutes / maxMinutes) * 100) : 0;
+        const labelClass = row.isToday ? 'text-xs font-bold text-white' : 'text-xs font-semibold text-slate-400';
+        const fillClass = row.isToday ? 'week-bar-fill h-full bg-blue-400 rounded-full transition-all duration-500' : 'week-bar-fill h-full bg-blue-500 rounded-full transition-all duration-500';
+        const durationText = row.totalMinutes > 0 ? formatDuration(row.totalMinutes) : '--';
+
+        const rowEl = document.createElement('div');
+        rowEl.className = 'flex items-center gap-3';
+        if (row.isToday) {
+            rowEl.dataset.todayRow = 'true';
+            rowEl.dataset.baseMinutes = String(row.baseMinutes);
+        }
+
+        rowEl.innerHTML = `
+            <span class="w-8 ${labelClass}">${row.label}</span>
+            <div class="flex-1 h-2.5 bg-[#1e293b] rounded-full overflow-hidden">
+                <div class="${fillClass}" style="width: ${barWidth}%"></div>
+            </div>
+            <span class="week-day-duration w-14 text-right text-xs ${row.isToday ? 'text-slate-300 font-medium' : 'text-slate-400'}">${durationText}</span>
+        `;
+        sessionsListElement.appendChild(rowEl);
+    });
 }
 
 async function updateUI() {
@@ -157,51 +233,7 @@ async function updateUI() {
         progressBar.style.width = `${percentage}%`;
     }
 
-    if (todaySummary && todaySummary.sessions && todaySummary.sessions.length > 0) {
-        renderRecentSessions(todaySummary.sessions);
-    } else {
-        sessionsListElement.innerHTML = `
-            <div class="bg-slate-900/40 p-3.5 rounded-full text-slate-600 mb-3">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-                </svg>
-            </div>
-            <p class="text-sm font-semibold text-slate-400">No shifts logged this week</p>
-            <p class="text-xs text-slate-500 mt-1 max-w-[200px]">Clock in to start tracking your time</p>
-        `;
-        sessionsListElement.className = "flex-1 flex flex-col items-center justify-center text-center p-4";
-    }
-}
-
-function renderRecentSessions(sessions) {
-    sessionsListElement.innerHTML = '';
-    sessionsListElement.className = "space-y-3 w-full overflow-y-auto max-h-[300px] pr-1 text-left";
-
-    sessions.forEach(session => {
-        const sessionDiv = document.createElement('div');
-        sessionDiv.className = "bg-slate-900/50 p-4 rounded-xl border border-slate-800/40 flex justify-between items-center transition-all";
-
-        const clockInTime = new Date(session.clockIn).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        const clockOutTime = session.clockOut ? new Date(session.clockOut).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--:--';
-        const duration = session.clockOut
-            ? formatDuration(session.durationMinutes)
-            : formatDuration(getElapsedMinutes(session.clockIn));
-        const durationBadgeClass = session.clockOut
-            ? 'text-xs font-semibold px-2.5 py-1 rounded-md bg-slate-800 text-slate-300'
-            : 'ongoing-duration-badge text-xs font-semibold px-2.5 py-1 rounded-md bg-green-500/10 text-green-400';
-
-        sessionDiv.innerHTML = `
-            <div class="flex flex-col gap-0.5">
-                <p class="text-sm font-bold text-white tracking-tight">${clockInTime} — ${clockOutTime}</p>
-                <p class="text-xs text-slate-400">Logged Shift</p>
-                ${session.note ? `<p class="text-[11px] text-blue-400 mt-1 italic">Note: ${session.note}</p>` : ''}
-            </div>
-            <div class="text-right">
-                <span class="${durationBadgeClass}">${duration}</span>
-            </div>
-        `;
-        sessionsListElement.appendChild(sessionDiv);
-    });
+    renderWeeklyActivityChart(weekSummary, isClockedIn);
 }
 
 /** @type {string | null} */

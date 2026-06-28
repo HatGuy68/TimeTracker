@@ -11,6 +11,19 @@ const CLOCK_IN = 'CLOCK_IN';
 const CLOCK_OUT = 'CLOCK_OUT';
 
 /**
+ * Formats a timestamp as YYYY-MM-DD in local time.
+ * @param {number | Date} value
+ * @returns {string}
+ */
+export function toLocalDateKey(value) {
+    const date = value instanceof Date ? value : new Date(value);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+
+/**
  * Clocks in the user.
  * @param {string} [note]
  * @returns {Promise<TimeEntry>}
@@ -151,7 +164,7 @@ function groupSessionsByDate(sessions) {
     for (const session of sessions) {
         if (!session.clockIn) continue;
 
-        const date = new Date(session.clockIn).toISOString().split('T')[0]; // YYYY-MM-DD
+        const date = toLocalDateKey(session.clockIn);
 
         if (!dailySummaries.has(date)) {
             dailySummaries.set(date, {
@@ -189,8 +202,19 @@ export async function getTodaySummary() {
     const sessions = generateWorkSessions(entries);
     const dailySummaries = groupSessionsByDate(sessions);
 
-    const today = startOfDay.toISOString().split('T')[0];
+    const today = toLocalDateKey(startOfDay);
     return dailySummaries.get(today) || null;
+}
+
+/**
+ * Returns Sunday midnight local time for the current week.
+ * @returns {Date}
+ */
+export function getWeekStartDate() {
+    const startOfWeek = new Date();
+    startOfWeek.setHours(0, 0, 0, 0);
+    startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay());
+    return startOfWeek;
 }
 
 /**
@@ -199,9 +223,7 @@ export async function getTodaySummary() {
  */
 export async function getWeekSummary() {
     const now = Date.now();
-    const startOfWeek = new Date();
-    startOfWeek.setHours(0, 0, 0, 0);
-    startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay()); // Sunday
+    const startOfWeek = getWeekStartDate();
 
     const entries = await getEntriesBetween(startOfWeek.getTime(), now);
     const sessions = generateWorkSessions(entries);

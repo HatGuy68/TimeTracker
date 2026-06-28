@@ -72,18 +72,18 @@
   ],
   "screenshots": [
     {
-      "src": "./assets/screenshots/narrow.png",
-      "sizes": "390x844",
-      "type": "image/png",
-      "form_factor": "narrow",
-      "label": "TimeTracker home screen on mobile"
-    },
-    {
-      "src": "./assets/screenshots/wide.png",
-      "sizes": "1280x720",
+      "src": "./assets/screenshots/screenshot.png",
+      "sizes": "1280x800",
       "type": "image/png",
       "form_factor": "wide",
-      "label": "TimeTracker home screen on desktop"
+      "label": "TimeTracker home screen"
+    },
+    {
+      "src": "./assets/screenshots/TimeTrackerBanner.png",
+      "sizes": "640x400",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "TimeTracker Banner"
     }
   ],
   "icons": [
