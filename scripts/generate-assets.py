@@ -10,9 +10,15 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 ASSETS = ROOT / "assets"
 SPLASH = ASSETS / "splash"
+SCREENSHOTS = ASSETS / "screenshots"
 
 ICON_SIZES = (16, 48, 128, 192, 512)
 MASKABLE_SIZE = 512
+
+SCREENSHOT_SIZES = (
+    (390, 844, "narrow.png"),
+    (1280, 720, "wide.png"),
+)
 
 SPLASH_SCREENS = (
     (1290, 2796, "(device-width: 430px) and (device-height: 932px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)"),
@@ -28,9 +34,15 @@ SPLASH_SCREENS = (
 # TimeTracker palette (matches index.html dark theme)
 BG_APP = (5, 7, 15)
 BG_SURFACE = (7, 11, 20)
+BG_CARD = (17, 24, 39)
 SLATE_800 = (30, 41, 59)
+SLATE_700 = (51, 65, 85)
+SLATE_500 = (100, 116, 139)
+SLATE_400 = (148, 163, 184)
 BLUE_400 = (96, 165, 250)
 BLUE_500 = (59, 130, 246)
+GREEN_400 = (52, 211, 153)
+RED_400 = (248, 113, 113)
 WHITE = (255, 255, 255, 255)
 BLUE_GLOW = (59, 130, 246, 48)
 
@@ -148,6 +160,99 @@ def render_maskable_icon(size: int) -> list[tuple[int, int, int, int]]:
     return pixels
 
 
+def fill_rect(
+    pixels: list[tuple[int, int, int, int]],
+    width: int,
+    x: int,
+    y: int,
+    w: int,
+    h: int,
+    color: tuple[int, int, int, int],
+    *,
+    radius: float = 0,
+) -> None:
+    img_height = len(pixels) // width
+    x2 = x + w
+    y2 = y + h
+    for py in range(max(0, y), min(img_height, y2)):
+        for px in range(max(0, x), min(width, x2)):
+            if radius <= 0 or rounded_rect_mask(x, y, w, h, radius, px + 0.5, py + 0.5):
+                pixels[py * width + px] = color
+
+
+def render_app_screenshot(width: int, height: int) -> list[tuple[int, int, int, int]]:
+    """Draw a simplified TimeTracker UI for PWA store screenshots."""
+    pixels = [(*BG_APP, 255)] * (width * height)
+    is_wide = width > height
+
+    if is_wide:
+        panel_w = min(448, int(width * 0.36))
+        panel_x = (width - panel_w) // 2
+        fill_rect(pixels, width, panel_x, 0, panel_w, height, (*BG_SURFACE, 255))
+        content_x = panel_x
+        content_w = panel_w
+    else:
+        content_x = 0
+        content_w = width
+
+    pad = max(16, content_w // 24)
+    y = pad + 8
+
+    fill_rect(pixels, width, content_x + pad, y, content_w - pad * 2, 56, (*SLATE_800, 255), radius=14)
+    fill_rect(pixels, width, content_x + pad + 12, y + 14, 28, 28, (*SLATE_700, 255), radius=8)
+    fill_rect(pixels, width, content_x + pad + 52, y + 20, 120, 14, (*SLATE_500, 255), radius=4)
+    fill_rect(pixels, width, content_x + content_w - pad - 88, y + 16, 72, 24, (*SLATE_800, 255), radius=12)
+    y += 72
+
+    fill_rect(pixels, width, content_x + pad, y, content_w - pad * 2, 120, (*BG_CARD, 255), radius=18)
+    fill_rect(pixels, width, content_x + pad + 18, y + 18, 90, 10, (*BLUE_400, 255), radius=3)
+    fill_rect(pixels, width, content_x + pad + 18, y + 38, 160, 28, (*WHITE[:3], 255), radius=5)
+    fill_rect(pixels, width, content_x + pad + 18, y + 78, 110, 10, (*SLATE_400, 255), radius=3)
+    y += 136
+
+    fill_rect(pixels, width, content_x + pad, y, content_w - pad * 2, 72, (*BG_CARD, 255), radius=18)
+    fill_rect(pixels, width, content_x + pad + 18, y + 18, 130, 10, (*SLATE_400, 255), radius=3)
+    fill_rect(pixels, width, content_x + pad + 18, y + 40, content_w - pad * 2 - 36, 8, (*SLATE_800, 255), radius=4)
+    fill_rect(
+        pixels,
+        width,
+        content_x + pad + 18,
+        y + 40,
+        int((content_w - pad * 2 - 36) * 0.62),
+        8,
+        (*BLUE_500, 255),
+        radius=4,
+    )
+    y += 88
+
+    button_h = 64
+    fill_rect(pixels, width, content_x + pad, y, content_w - pad * 2, button_h, (15, 35, 28, 255), radius=18)
+    fill_rect(pixels, width, content_x + pad + 16, y + 14, 36, 36, (*GREEN_400, 255), radius=10)
+    fill_rect(pixels, width, content_x + pad + 64, y + 18, 90, 12, (*GREEN_400, 255), radius=3)
+    fill_rect(pixels, width, content_x + pad + 64, y + 36, 120, 8, (*SLATE_500, 255), radius=3)
+    y += button_h + 12
+
+    fill_rect(pixels, width, content_x + pad, y, content_w - pad * 2, button_h, (35, 18, 18, 255), radius=18)
+    fill_rect(pixels, width, content_x + pad + 16, y + 14, 36, 36, (*RED_400, 255), radius=10)
+    fill_rect(pixels, width, content_x + pad + 64, y + 18, 100, 12, (*RED_400, 255), radius=3)
+    fill_rect(pixels, width, content_x + pad + 64, y + 36, 130, 8, (*SLATE_500, 255), radius=3)
+    y += button_h + 16
+
+    list_h = min(220, height - y - pad)
+    fill_rect(pixels, width, content_x + pad, y, content_w - pad * 2, list_h, (*BG_CARD, 255), radius=18)
+    fill_rect(pixels, width, content_x + pad + 18, y + 20, 130, 10, (*SLATE_400, 255), radius=3)
+
+    row_y = y + 48
+    for _ in range(2):
+        fill_rect(pixels, width, content_x + pad + 14, row_y, content_w - pad * 2 - 28, 54, (*SLATE_800, 255), radius=12)
+        fill_rect(pixels, width, content_x + pad + 28, row_y + 14, 110, 10, (*WHITE[:3], 255), radius=3)
+        fill_rect(pixels, width, content_x + pad + 28, row_y + 30, 70, 8, (*SLATE_500, 255), radius=3)
+        fill_rect(pixels, width, content_x + content_w - pad - 72, row_y + 16, 52, 22, (*SLATE_700, 255), radius=6)
+        row_y += 62
+
+    return pixels
+
+
 def render_splash(width: int, height: int) -> list[tuple[int, int, int, int]]:
     icon_size = min(width, height) // 4
     icon = render_icon(icon_size)
@@ -231,6 +336,12 @@ def main() -> None:
     snippet = ASSETS / "splash-links.html"
     snippet.write_text("\n".join(splash_links) + "\n", encoding="utf-8")
     print(f"Wrote {snippet.relative_to(ROOT)}")
+
+    SCREENSHOTS.mkdir(parents=True, exist_ok=True)
+    for width, height, filename in SCREENSHOT_SIZES:
+        out = SCREENSHOTS / filename
+        write_png(out, width, height, render_app_screenshot(width, height))
+        print(f"Wrote {out.relative_to(ROOT)}")
 
 
 if __name__ == "__main__":

@@ -397,11 +397,86 @@ goalPresetBtns.forEach(btn => {
 exportDataBtn.addEventListener('click', exportDataAsJson);
 clearDataBtn.addEventListener('click', clearAllDataNow);
 
+function preventBrowserZoom() {
+    document.addEventListener('wheel', (event) => {
+        if (event.ctrlKey) {
+            event.preventDefault();
+        }
+    }, { passive: false });
+
+    document.addEventListener('gesturestart', (event) => {
+        event.preventDefault();
+    }, { passive: false });
+}
+
+async function handleLaunchAction() {
+    const params = new URLSearchParams(location.search);
+    const action = params.get('action');
+    if (!action) {
+        return;
+    }
+
+    history.replaceState(null, '', location.pathname);
+
+    if (action === 'settings') {
+        showSettings();
+        return;
+    }
+
+    if (action === 'clock-in' && !clockInButton.disabled) {
+        await timeTrackingService.clockIn();
+        await updateUI();
+        return;
+    }
+
+    if (action === 'clock-out' && !clockOutButton.disabled) {
+        await timeTrackingService.clockOut();
+        await updateUI();
+    }
+}
+
+async function importLaunchFile(fileHandle) {
+    const file = await fileHandle.getFile();
+    const text = await file.text();
+
+    const confirmed = confirm(`Import time entries from "${file.name}"? This replaces all existing data.`);
+    if (!confirmed) {
+        return;
+    }
+
+    await timeTrackingService.importData(text);
+    activeClockInTimestamp = null;
+    showMain();
+    await updateUI();
+}
+
+function registerLaunchQueueConsumer() {
+    if (!('launchQueue' in window)) {
+        return;
+    }
+
+    launchQueue.setConsumer(async (launchParams) => {
+        const files = launchParams.files;
+        if (!files?.length) {
+            return;
+        }
+
+        try {
+            await importLaunchFile(files[0]);
+        } catch (error) {
+            alert(`Could not import file: ${error instanceof Error ? error.message : 'Invalid file'}`);
+        }
+    });
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
+    preventBrowserZoom();
+    registerLaunchQueueConsumer();
     updateLiveClock();
     await populateLiveAppLink();
     await runAutoClearIfNeeded();
     await updateUI();
+    await handleLaunchAction();
     setInterval(updateLiveClock, 60_000);
     setInterval(updateElapsedDisplay, 60_000);
     setInterval(updateUI, 1000 * 30);
