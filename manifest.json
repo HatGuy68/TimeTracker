@@ -1,0 +1,27 @@
+{
+  "manifest_version": 3,
+  "name": "TimeTracker",
+  "short_name": "TimeTracker",
+  "version": "1.0.0",
+  "description": "Track clock in and clock out times with daily or weekly goals.",
+  "permissions": ["storage", "sidePanel"],
+  "icons": {
+    "16": "assets/icon-16.png",
+    "48": "assets/icon-48.png",
+    "128": "assets/icon-128.png"
+  },
+  "action": {
+    "default_title": "TimeTracker",
+    "default_icon": {
+      "16": "assets/icon-16.png",
+      "48": "assets/icon-48.png",
+      "128": "assets/icon-128.png"
+    }
+  },
+  "side_panel": {
+    "default_path": "index.html"
+  },
+  "background": {
+    "service_worker": "background.js"
+  }
+}
