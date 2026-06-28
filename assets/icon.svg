@@ -1,8 +1,8 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="TimeTracker">
   <rect width="512" height="512" rx="112" fill="#070b14"/>
   <rect x="108" y="108" width="296" height="296" rx="56" fill="#1e293b"/>
-  <circle cx="256" cy="264" r="118" fill="none" stroke="#60a5fa" stroke-width="20"/>
-  <circle cx="256" cy="264" r="6" fill="#3b82f6"/>
-  <line x1="256" y1="264" x2="256" y2="202" stroke="#60a5fa" stroke-width="20" stroke-linecap="round"/>
-  <line x1="256" y1="264" x2="295" y2="225" stroke="#60a5fa" stroke-width="15" stroke-linecap="round"/>
+  <circle cx="256" cy="256" r="118" fill="none" stroke="#60a5fa" stroke-width="20"/>
+  <circle cx="256" cy="256" r="6" fill="#3b82f6"/>
+  <line x1="256" y1="256" x2="256" y2="194" stroke="#60a5fa" stroke-width="20" stroke-linecap="round"/>
+  <line x1="256" y1="256" x2="295" y2="217" stroke="#60a5fa" stroke-width="15" stroke-linecap="round"/>
 </svg>

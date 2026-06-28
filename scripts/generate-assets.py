@@ -31,20 +31,19 @@ SPLASH_SCREENS = (
     (2048, 2732, "(device-width: 1024px) and (device-height: 1366px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)"),
 )
 
-# TimeTracker palette (matches index.html dark theme)
+# TimeTracker palette (matches assets/icon.svg)
 BG_APP = (5, 7, 15)
-BG_SURFACE = (7, 11, 20)
+BG_SURFACE = (7, 11, 20)  # #070b14 outer rounded rect
+SLATE_800 = (30, 41, 57)  # #1e293b inner rounded rect
 BG_CARD = (17, 24, 39)
-SLATE_800 = (30, 41, 59)
 SLATE_700 = (51, 65, 85)
 SLATE_500 = (100, 116, 139)
 SLATE_400 = (148, 163, 184)
-BLUE_400 = (96, 165, 250)
-BLUE_500 = (59, 130, 246)
+BLUE_400 = (96, 165, 250)  # #60a5fa clock ring and hands
+BLUE_500 = (59, 130, 246)  # #3b82f6 center dot
 GREEN_400 = (52, 211, 153)
 RED_400 = (248, 113, 113)
 WHITE = (255, 255, 255, 255)
-BLUE_GLOW = (59, 130, 246, 48)
 
 
 def lerp(a: float, b: float, t: float) -> float:
@@ -101,48 +100,53 @@ def dist_to_segment(px: float, py: float, x1: float, y1: float, x2: float, y2: f
 
 
 def render_icon(size: int, *, on_dark: bool = False) -> list[tuple[int, int, int, int]]:
-    """Draw a clock icon matching the TimeTracker app header."""
+    """Rasterize assets/icon.svg at the given size."""
     pixels: list[tuple[int, int, int, int]] = []
     scale = size / 512
 
     def s(v: float) -> float:
         return v * scale
 
-    cx = size / 2
-    cy = size / 2 + s(8)
-    clock_radius = s(118)
-    ring_outer = clock_radius + s(10)
-    ring_inner = clock_radius - s(10)
-    hand_width = max(s(10), 1.5)
-    hour_len = clock_radius * 0.52
-    minute_len = clock_radius * 0.78
-
-    hour_angle = math.radians(-60)
-    minute_angle = math.radians(30)
-
-    hour_end = (cx + hour_len * math.sin(hour_angle), cy - hour_len * math.cos(hour_angle))
-    minute_end = (cx + minute_len * math.sin(minute_angle), cy - minute_len * math.cos(minute_angle))
-
+    outer_box = (s(0), s(0), s(512), s(512), s(112))
     icon_box = (s(108), s(108), s(296), s(296), s(56))
 
-    for py in range(size):
-        row_bg = BG_APP if on_dark else BG_SURFACE
-        for px in range(size):
-            color = (*row_bg, 255)
+    cx = s(256)
+    cy = s(256)
+    clock_radius = s(118)
+    ring_half = s(10)
+    hour_half = max(s(10), 0.75)
+    minute_half = max(s(7.5), 0.75)
+    center_radius = s(6)
 
-            if rounded_rect_mask(s(0), s(0), s(512), s(512), s(112), px + 0.5, py + 0.5):
-                if rounded_rect_mask(*icon_box, px + 0.5, py + 0.5):
-                    color = (*SLATE_800, 255)
-                elif in_ring(px + 0.5, py + 0.5, cx, cy, ring_inner, ring_outer):
-                    color = (*BLUE_400, 255)
-                elif in_disk(px + 0.5, py + 0.5, cx, cy, s(6)):
-                    color = (*BLUE_500, 255)
-                elif dist_to_segment(px + 0.5, py + 0.5, cx, cy, *hour_end) <= hand_width:
-                    color = (*BLUE_400, 255)
-                elif dist_to_segment(px + 0.5, py + 0.5, cx, cy, *minute_end) <= max(hand_width * 0.75, 1):
-                    color = (*BLUE_400, 255)
-                elif in_disk(px + 0.5, py + 0.5, cx, cy, clock_radius + s(28)):
-                    color = blend(row_bg, BLUE_GLOW)
+    hour_end = (cx, s(194))
+    minute_end = (s(295), s(217))
+
+    canvas_bg = BG_APP if on_dark else BG_SURFACE
+
+    for py in range(size):
+        for px in range(size):
+            px_f = px + 0.5
+            py_f = py + 0.5
+
+            if not rounded_rect_mask(*outer_box, px_f, py_f):
+                pixels.append((*canvas_bg, 255))
+                continue
+
+            color = (*BG_SURFACE, 255)
+
+            if rounded_rect_mask(*icon_box, px_f, py_f):
+                color = (*SLATE_800, 255)
+
+            ring_inner = clock_radius - ring_half
+            ring_outer = clock_radius + ring_half
+            if in_ring(px_f, py_f, cx, cy, ring_inner, ring_outer):
+                color = (*BLUE_400, 255)
+            elif in_disk(px_f, py_f, cx, cy, center_radius):
+                color = (*BLUE_500, 255)
+            elif dist_to_segment(px_f, py_f, cx, cy, *hour_end) <= hour_half:
+                color = (*BLUE_400, 255)
+            elif dist_to_segment(px_f, py_f, cx, cy, *minute_end) <= minute_half:
+                color = (*BLUE_400, 255)
 
             pixels.append(color)
     return pixels
@@ -277,10 +281,10 @@ def write_svg(path: Path) -> None:
     svg = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="TimeTracker">
   <rect width="512" height="512" rx="112" fill="#070b14"/>
   <rect x="108" y="108" width="296" height="296" rx="56" fill="#1e293b"/>
-  <circle cx="256" cy="264" r="118" fill="none" stroke="#60a5fa" stroke-width="20"/>
-  <circle cx="256" cy="264" r="6" fill="#3b82f6"/>
-  <line x1="256" y1="264" x2="256" y2="202" stroke="#60a5fa" stroke-width="20" stroke-linecap="round"/>
-  <line x1="256" y1="264" x2="295" y2="225" stroke="#60a5fa" stroke-width="15" stroke-linecap="round"/>
+  <circle cx="256" cy="256" r="118" fill="none" stroke="#60a5fa" stroke-width="20"/>
+  <circle cx="256" cy="256" r="6" fill="#3b82f6"/>
+  <line x1="256" y1="256" x2="256" y2="194" stroke="#60a5fa" stroke-width="20" stroke-linecap="round"/>
+  <line x1="256" y1="256" x2="295" y2="217" stroke="#60a5fa" stroke-width="15" stroke-linecap="round"/>
 </svg>
 """
     path.write_text(svg, encoding="utf-8")
