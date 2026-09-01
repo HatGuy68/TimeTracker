@@ -52,7 +52,7 @@
                     </svg>
                 </div>
                 <h1 class="text-sm font-bold tracking-tight text-white truncate">Time<span class="text-blue-400">Tracker</span></h1>
-                <span id="header-date" class="hidden sm:inline text-[11px] font-semibold tracking-wide text-slate-500 tnum truncate">—</span>
+                <span id="header-date" class="text-[11px] font-semibold tracking-wide text-slate-500 tnum truncate">—</span>
             </div>
             <div class="flex items-center gap-1.5 shrink-0">
                 <div id="connection-state" class="flex items-center gap-1.5 px-2 py-1 rounded-md bg-[#172033]/80 text-[11px] font-semibold text-slate-400">
@@ -101,7 +101,7 @@
 
                     <div class="flex items-center justify-between gap-3 mt-3 text-[11px] font-medium text-slate-400">
                         <span class="tnum"><span id="shift-start">—</span> → <span id="shift-end">—</span></span>
-                        <span id="working-since" class="hidden tnum text-slate-500"></span>
+                        <span id="working-since" class="tnum text-slate-500">—</span>
                     </div>
 
                     <div class="mt-2.5 flex items-center gap-2.5">
@@ -152,26 +152,26 @@
                     </div>
                 </section>
 
-                <section class="flex flex-wrap gap-1.5">
-                    <div class="inline-flex items-center gap-1.5 rounded-md border border-slate-800/70 bg-[#0c1220] px-2 py-1">
+                <section class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-2 xl:grid-cols-3 gap-1.5">
+                    <div class="inline-flex items-center gap-1.5 rounded-md border border-slate-800/70 bg-[#0c1220] px-2 py-1 min-w-0">
                         <span class="text-[10px] font-bold tracking-wider text-slate-500 uppercase">Avg</span>
-                        <span id="insight-avg" class="tnum text-[11px] font-semibold text-slate-200">—</span>
+                        <span id="insight-avg" class="tnum text-[11px] font-semibold text-slate-200 truncate">—</span>
                     </div>
-                    <div class="inline-flex items-center gap-1.5 rounded-md border border-slate-800/70 bg-[#0c1220] px-2 py-1">
+                    <div class="inline-flex items-center gap-1.5 rounded-md border border-slate-800/70 bg-[#0c1220] px-2 py-1 min-w-0">
                         <span class="text-[10px] font-bold tracking-wider text-slate-500 uppercase">Week</span>
-                        <span id="insight-week" class="tnum text-[11px] font-semibold text-slate-200">—</span>
+                        <span id="insight-week" class="tnum text-[11px] font-semibold text-slate-200 truncate">—</span>
                     </div>
-                    <div class="inline-flex items-center gap-1.5 rounded-md border border-slate-800/70 bg-[#0c1220] px-2 py-1">
+                    <div class="inline-flex items-center gap-1.5 rounded-md border border-slate-800/70 bg-[#0c1220] px-2 py-1 min-w-0">
                         <span class="text-[10px] font-bold tracking-wider text-slate-500 uppercase">Pace</span>
-                        <span id="insight-pace" class="tnum text-[11px] font-semibold text-slate-200">—</span>
+                        <span id="insight-pace" class="tnum text-[11px] font-semibold text-slate-200 truncate">—</span>
                     </div>
-                    <div class="inline-flex items-center gap-1.5 rounded-md border border-slate-800/70 bg-[#0c1220] px-2 py-1">
+                    <div class="inline-flex items-center gap-1.5 rounded-md border border-slate-800/70 bg-[#0c1220] px-2 py-1 min-w-0">
                         <span class="text-[10px] font-bold tracking-wider text-slate-500 uppercase">Done by</span>
-                        <span id="insight-done-by" class="tnum text-[11px] font-semibold text-slate-200">—</span>
+                        <span id="insight-done-by" class="tnum text-[11px] font-semibold text-slate-200 truncate">—</span>
                     </div>
-                    <div class="inline-flex items-center gap-1.5 rounded-md border border-slate-800/70 bg-[#0c1220] px-2 py-1">
+                    <div class="inline-flex items-center gap-1.5 rounded-md border border-slate-800/70 bg-[#0c1220] px-2 py-1 min-w-0 col-span-2 sm:col-span-1 lg:col-span-2 xl:col-span-1">
                         <span class="text-[10px] font-bold tracking-wider text-slate-500 uppercase">OT month</span>
-                        <span id="insight-overtime" class="tnum text-[11px] font-semibold text-slate-200">—</span>
+                        <span id="insight-overtime" class="tnum text-[11px] font-semibold text-slate-200 truncate">—</span>
                     </div>
                 </section>
             </div>

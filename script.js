@@ -252,10 +252,8 @@ function computeMetrics() {
         : null;
 
     const firstSession = dashboard.todaySessions[0];
-    const activeSession = dashboard.todaySessions.find(session => !session.clockOut) || null;
-    const shiftStart = dashboard.isClockedIn && activeClockInTimestamp
-        ? activeClockInTimestamp
-        : firstSession?.clockIn ?? null;
+    const shiftStart = firstSession?.clockIn
+        ?? (dashboard.isClockedIn ? activeClockInTimestamp : null);
 
     let expectedOut = null;
     if (remainingToday > 0) {
@@ -365,13 +363,11 @@ function paintStatus(metrics) {
     setText('shift-start', metrics.shiftStart ? formatClock(metrics.shiftStart) : '—');
     setText('shift-end', metrics.expectedOut ? formatClock(metrics.expectedOut) : 'Target met');
 
-    if (dashboard.isClockedIn && activeClockInTimestamp !== null) {
-        const elapsed = formatDuration(getElapsedMinutes(activeClockInTimestamp));
-        workingSinceElement.textContent = `Since ${formatClock(activeClockInTimestamp)} · ${elapsed}`;
-        workingSinceElement.classList.remove('hidden');
-    } else {
-        workingSinceElement.classList.add('hidden');
-    }
+    const remainingLabel = metrics.overtimeToday > 0
+        ? `+${formatDuration(metrics.overtimeToday)} overtime`
+        : `${formatDuration(metrics.remainingToday, 'padded')} remaining`;
+    workingSinceElement.textContent = remainingLabel;
+    workingSinceElement.classList.remove('hidden');
 
     const fillClass = metrics.todayPct >= 100
         ? 'h-full rounded-full bg-emerald-400 transition-all duration-500'
