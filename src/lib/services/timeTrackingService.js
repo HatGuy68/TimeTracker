@@ -94,6 +94,7 @@ export async function getCurrentSession() {
         const durationMinutes = (now - lastClockIn.timestamp) / (1000 * 60);
         return {
             clockIn: lastClockIn.timestamp,
+            clockInId: lastClockIn.id,
             clockOut: undefined,
             durationMinutes: durationMinutes,
             note: lastClockIn.note,
@@ -121,6 +122,7 @@ function generateWorkSessions(entries) {
                 // Previous session was incomplete, close it now.
                 sessions.push({
                     clockIn: currentSession.clockIn,
+                    clockInId: currentSession.clockInId,
                     clockOut: entry.timestamp, // Use current clock-in as clock-out for previous incomplete session
                     durationMinutes: (entry.timestamp - currentSession.clockIn) / (1000 * 60),
                     note: currentSession.note,
@@ -128,11 +130,13 @@ function generateWorkSessions(entries) {
             }
             currentSession = {
                 clockIn: entry.timestamp,
+                clockInId: entry.id,
                 note: entry.note,
             };
         } else if (entry.type === CLOCK_OUT) {
             if (currentSession) {
                 currentSession.clockOut = entry.timestamp;
+                currentSession.clockOutId = entry.id;
                 currentSession.durationMinutes = (currentSession.clockOut - currentSession.clockIn) / (1000 * 60);
                 currentSession.note = currentSession.note || entry.note;
                 sessions.push(currentSession);
@@ -252,6 +256,27 @@ export async function getMonthSummary() {
 export async function getAllSessions() {
     const entries = await getAllEntries();
     return generateWorkSessions(entries);
+}
+
+/**
+ * Updates the timestamps of a work session's underlying clock entries.
+ * @param {{ clockInId?: string, clockInTimestamp?: number, clockOutId?: string, clockOutTimestamp?: number }} patch
+ * @returns {Promise<void>}
+ */
+export async function updateSessionTimestamps(patch) {
+    if (patch.clockInId && patch.clockInTimestamp != null) {
+        const entry = await getEntry(patch.clockInId);
+        if (entry) {
+            await updateEntry({ ...entry, timestamp: patch.clockInTimestamp });
+        }
+    }
+
+    if (patch.clockOutId && patch.clockOutTimestamp != null) {
+        const entry = await getEntry(patch.clockOutId);
+        if (entry) {
+            await updateEntry({ ...entry, timestamp: patch.clockOutTimestamp });
+        }
+    }
 }
 
 /**

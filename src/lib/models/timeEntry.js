@@ -10,7 +10,9 @@
 /**
  * @typedef {object} WorkSession
  * @property {number} clockIn
+ * @property {string} [clockInId]
  * @property {number} [clockOut]
+ * @property {string} [clockOutId]
  * @property {number} [durationMinutes]
  * @property {string} [note]
  */

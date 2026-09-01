@@ -42,6 +42,34 @@ export function getGoalMinutes() {
     return getSettings().goalHours * 60;
 }
 
+const WORKDAYS_PER_WEEK = 5;
+
+/**
+ * Daily target in minutes. Uses the configured goal when tracking daily,
+ * otherwise spreads a weekly goal across a 5-day work week.
+ * @returns {number}
+ */
+export function getDailyTargetMinutes() {
+    const settings = getSettings();
+    if (settings.progressPeriod === 'daily') {
+        return settings.goalHours * 60;
+    }
+    return (settings.goalHours * 60) / WORKDAYS_PER_WEEK;
+}
+
+/**
+ * Weekly target in minutes. Uses the configured goal when tracking weekly,
+ * otherwise multiplies a daily goal across a 5-day work week.
+ * @returns {number}
+ */
+export function getWeeklyTargetMinutes() {
+    const settings = getSettings();
+    if (settings.progressPeriod === 'weekly') {
+        return settings.goalHours * 60;
+    }
+    return settings.goalHours * 60 * WORKDAYS_PER_WEEK;
+}
+
 /**
  * @param {Date} date
  * @returns {Date}
