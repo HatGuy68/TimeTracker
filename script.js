@@ -99,12 +99,28 @@ function toTimeInputValue(timestamp) {
 }
 
 function applyTimeToTimestamp(originalTimestamp, timeValue) {
-    const parts = String(timeValue).split(':').map(Number);
-    if (parts.length < 2 || Number.isNaN(parts[0]) || Number.isNaN(parts[1])) {
+    const text = String(timeValue).trim();
+    const match = text.match(/^(\d{1,2}):(\d{2})(?::\d{2})?\s*(AM|PM)?$/i);
+    if (!match) {
         return null;
     }
+
+    let hours = Number(match[1]);
+    const minutes = Number(match[2]);
+    const ampm = match[3]?.toUpperCase();
+
+    if (ampm === 'PM' && hours < 12) {
+        hours += 12;
+    } else if (ampm === 'AM' && hours === 12) {
+        hours = 0;
+    }
+
+    if (Number.isNaN(hours) || Number.isNaN(minutes) || hours > 23 || minutes > 59) {
+        return null;
+    }
+
     const next = new Date(originalTimestamp);
-    next.setHours(parts[0], parts[1], 0, 0);
+    next.setHours(hours, minutes, 0, 0);
     return next.getTime();
 }
 
@@ -611,11 +627,11 @@ function renderTodaySessions() {
             editor.innerHTML = `
                 <label class="block">
                     <span class="block text-[10px] font-bold tracking-wider text-slate-500 uppercase mb-1">In</span>
-                    <input name="clock-in" type="time" step="60" value="${toTimeInputValue(session.clockIn)}" class="select-text w-full bg-[#0b1220] border border-slate-700 rounded-md px-2 py-2 text-sm text-white tnum focus:outline-none focus:border-blue-500/50" />
+                    <input name="clock-in" type="text" inputmode="numeric" autocomplete="off" spellcheck="false" value="${formatClock(session.clockIn)}" class="select-text w-full bg-[#0b1220] border border-slate-700 rounded-md px-2 py-2 text-sm text-white tnum focus:outline-none focus:border-blue-500/50" />
                 </label>
                 <label class="block">
                     <span class="block text-[10px] font-bold tracking-wider text-slate-500 uppercase mb-1">Out</span>
-                    <input name="clock-out" type="time" step="60" ${isActive ? 'disabled' : ''} value="${session.clockOut ? toTimeInputValue(session.clockOut) : ''}" class="select-text w-full bg-[#0b1220] border border-slate-700 rounded-md px-2 py-2 text-sm text-white tnum focus:outline-none focus:border-blue-500/50 disabled:opacity-40" />
+                    <input name="clock-out" type="text" inputmode="numeric" autocomplete="off" spellcheck="false" ${isActive ? 'disabled' : ''} value="${session.clockOut ? formatClock(session.clockOut) : ''}" class="select-text w-full bg-[#0b1220] border border-slate-700 rounded-md px-2 py-2 text-sm text-white tnum focus:outline-none focus:border-blue-500/50 disabled:opacity-40" />
                 </label>
                 <button type="submit" class="h-[38px] px-3 rounded-md bg-blue-500/20 border border-blue-500/40 text-blue-300 text-xs font-semibold hover:bg-blue-500/30 transition-colors">Save</button>
             `;
