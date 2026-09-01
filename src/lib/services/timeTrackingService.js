@@ -264,18 +264,26 @@ export async function getAllSessions() {
  * @returns {Promise<void>}
  */
 export async function updateSessionTimestamps(patch) {
-    if (patch.clockInId && patch.clockInTimestamp != null) {
-        const entry = await getEntry(patch.clockInId);
-        if (entry) {
-            await updateEntry({ ...entry, timestamp: patch.clockInTimestamp });
+    if (patch.clockInTimestamp != null) {
+        if (!patch.clockInId) {
+            throw new Error('Clock-in entry not found.');
         }
+        const entry = await getEntry(patch.clockInId);
+        if (!entry) {
+            throw new Error('Clock-in entry not found.');
+        }
+        await updateEntry({ ...entry, timestamp: patch.clockInTimestamp });
     }
 
-    if (patch.clockOutId && patch.clockOutTimestamp != null) {
-        const entry = await getEntry(patch.clockOutId);
-        if (entry) {
-            await updateEntry({ ...entry, timestamp: patch.clockOutTimestamp });
+    if (patch.clockOutTimestamp != null) {
+        if (!patch.clockOutId) {
+            throw new Error('This session has no clock-out entry to edit.');
         }
+        const entry = await getEntry(patch.clockOutId);
+        if (!entry) {
+            throw new Error('Clock-out entry not found.');
+        }
+        await updateEntry({ ...entry, timestamp: patch.clockOutTimestamp });
     }
 }
 

@@ -1,4 +1,4 @@
-const CACHE = 'timetracker-v9'
+const CACHE = 'timetracker-v10'
 
 const PRECACHE = [
   './index.html',

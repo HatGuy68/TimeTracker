@@ -93,21 +93,16 @@ function formatClock(timestamp) {
     return new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
 
-function toTimeInputValue(timestamp) {
-    const date = new Date(timestamp);
-    return `${pad2(date.getHours())}:${pad2(date.getMinutes())}`;
-}
-
 function applyTimeToTimestamp(originalTimestamp, timeValue) {
-    const text = String(timeValue).trim();
-    const match = text.match(/^(\d{1,2}):(\d{2})(?::\d{2})?\s*(AM|PM)?$/i);
+    const text = String(timeValue).trim().replace(/[\u202f\u00a0]/g, ' ');
+    const match = text.match(/^(\d{1,2}):(\d{2})(?::\d{2})?\s*(a\.?m\.?|p\.?m\.?)?$/i);
     if (!match) {
         return null;
     }
 
     let hours = Number(match[1]);
     const minutes = Number(match[2]);
-    const ampm = match[3]?.toUpperCase();
+    const ampm = match[3]?.replace(/\./g, '').toUpperCase();
 
     if (ampm === 'PM' && hours < 12) {
         hours += 12;
@@ -598,6 +593,9 @@ function renderTodaySessions() {
 
         const row = document.createElement('div');
         row.dataset.sessionId = sessionId;
+        if (session.clockOutId) {
+            row.dataset.clockOutId = session.clockOutId;
+        }
         row.className = 'py-1.5';
 
         const header = document.createElement('button');
