@@ -99,9 +99,12 @@ function toTimeInputValue(timestamp) {
 }
 
 function applyTimeToTimestamp(originalTimestamp, timeValue) {
-    const [hours, minutes] = timeValue.split(':').map(Number);
+    const parts = String(timeValue).split(':').map(Number);
+    if (parts.length < 2 || Number.isNaN(parts[0]) || Number.isNaN(parts[1])) {
+        return null;
+    }
     const next = new Date(originalTimestamp);
-    next.setHours(hours, minutes, 0, 0);
+    next.setHours(parts[0], parts[1], 0, 0);
     return next.getTime();
 }
 
@@ -608,36 +611,52 @@ function renderTodaySessions() {
             editor.innerHTML = `
                 <label class="block">
                     <span class="block text-[10px] font-bold tracking-wider text-slate-500 uppercase mb-1">In</span>
-                    <input name="clock-in" type="time" value="${toTimeInputValue(session.clockIn)}" class="w-full bg-[#0b1220] border border-slate-700 rounded-md px-2 py-1.5 text-xs text-white tnum focus:outline-none focus:border-blue-500/50" />
+                    <input name="clock-in" type="time" step="60" value="${toTimeInputValue(session.clockIn)}" class="select-text w-full bg-[#0b1220] border border-slate-700 rounded-md px-2 py-2 text-sm text-white tnum focus:outline-none focus:border-blue-500/50" />
                 </label>
                 <label class="block">
                     <span class="block text-[10px] font-bold tracking-wider text-slate-500 uppercase mb-1">Out</span>
-                    <input name="clock-out" type="time" ${isActive ? 'disabled' : ''} value="${session.clockOut ? toTimeInputValue(session.clockOut) : ''}" class="w-full bg-[#0b1220] border border-slate-700 rounded-md px-2 py-1.5 text-xs text-white tnum focus:outline-none focus:border-blue-500/50 disabled:opacity-40" />
+                    <input name="clock-out" type="time" step="60" ${isActive ? 'disabled' : ''} value="${session.clockOut ? toTimeInputValue(session.clockOut) : ''}" class="select-text w-full bg-[#0b1220] border border-slate-700 rounded-md px-2 py-2 text-sm text-white tnum focus:outline-none focus:border-blue-500/50 disabled:opacity-40" />
                 </label>
-                <button type="submit" class="h-[34px] px-3 rounded-md bg-blue-500/20 border border-blue-500/40 text-blue-300 text-xs font-semibold hover:bg-blue-500/30 transition-colors">Save</button>
+                <button type="submit" class="h-[38px] px-3 rounded-md bg-blue-500/20 border border-blue-500/40 text-blue-300 text-xs font-semibold hover:bg-blue-500/30 transition-colors">Save</button>
             `;
+            editor.addEventListener('click', (event) => event.stopPropagation());
             editor.addEventListener('submit', async (event) => {
                 event.preventDefault();
-                const formData = new FormData(editor);
-                const inValue = String(formData.get('clock-in') || '');
-                const outValue = String(formData.get('clock-out') || '');
-                const clockInTimestamp = applyTimeToTimestamp(session.clockIn, inValue);
+                event.stopPropagation();
+
+                const inInput = editor.querySelector('input[name="clock-in"]');
+                const outInput = editor.querySelector('input[name="clock-out"]');
+                const clockInTimestamp = applyTimeToTimestamp(session.clockIn, inInput?.value || '');
+                if (clockInTimestamp == null) {
+                    alert('Enter a valid clock-in time.');
+                    return;
+                }
+
                 let clockOutTimestamp;
-                if (!isActive && outValue) {
-                    clockOutTimestamp = applyTimeToTimestamp(session.clockOut || session.clockIn, outValue);
+                if (!isActive) {
+                    clockOutTimestamp = applyTimeToTimestamp(session.clockOut || session.clockIn, outInput?.value || '');
+                    if (clockOutTimestamp == null) {
+                        alert('Enter a valid clock-out time.');
+                        return;
+                    }
                     if (clockOutTimestamp <= clockInTimestamp) {
                         alert('Clock-out must be after clock-in.');
                         return;
                     }
                 }
 
-                await timeTrackingService.updateSessionTimestamps({
-                    clockInId: session.clockInId,
-                    clockInTimestamp,
-                    clockOutId: session.clockOutId,
-                    clockOutTimestamp,
-                });
-                await updateUI();
+                try {
+                    await timeTrackingService.updateSessionTimestamps({
+                        clockInId: session.clockInId,
+                        clockInTimestamp,
+                        clockOutId: session.clockOutId,
+                        clockOutTimestamp,
+                    });
+                    expandedSessionId = null;
+                    await updateUI();
+                } catch (error) {
+                    alert(`Could not save session: ${error instanceof Error ? error.message : 'Unknown error'}`);
+                }
             });
             row.appendChild(editor);
         }
