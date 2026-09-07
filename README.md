@@ -82,7 +82,8 @@ Update [`site.config.json`](site.config.json) with your Pages URL and repository
 
 ```json
 {
-  "liveUrl": "https://your-username.github.io/your-repo-name/"
+  "liveUrl": "https://your-username.github.io/your-repo-name/",
+  "repoUrl": "https://github.com/your-username/your-repo-name"
 }
 ```
 
