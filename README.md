@@ -78,17 +78,18 @@ The repo includes a [GitHub Actions workflow](.github/workflows/pages.yml) that 
 3. Push to `main`/`master` and wait for the workflow to finish.
 4. Open the deployed URL (typically `https://<username>.github.io/<repo-name>/`).
 
-Update [`site.config.json`](site.config.json) with your Pages URL so the in-app **Live App Link** and header shortcut point to the right place:
+Update [`site.config.json`](site.config.json) with your Pages URL and repository URL:
 
 ```json
 {
-  "liveUrl": "https://your-username.github.io/your-repo-name/"
+  "liveUrl": "https://your-username.github.io/your-repo-name/",
+  "repoUrl": "https://github.com/your-username/your-repo-name"
 }
 ```
 
 ### Quick access in the app
 
-- **Header** — tap the external-link icon to open the live app URL.
+- **Header** — tap the GitHub icon to open the repository.
 - **Settings → Live App Link** — view, copy, or open the shareable URL.
 
 When you are already on GitHub Pages, the app detects the current URL automatically.
