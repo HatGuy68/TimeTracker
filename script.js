@@ -19,7 +19,7 @@ const todaySessionsListElement = document.getElementById('today-sessions-list');
 const mainView = document.getElementById('main-view');
 const settingsView = document.getElementById('settings-view');
 const settingsBtn = document.getElementById('settings-btn');
-const liveLinkBtn = document.getElementById('live-link-btn');
+const repoLink = document.getElementById('repo-link');
 const settingsBackBtn = document.getElementById('settings-back-btn');
 const liveAppUrlInput = document.getElementById('live-app-url');
 const copyLiveLinkBtn = document.getElementById('copy-live-link-btn');
@@ -758,6 +758,9 @@ async function updateUI() {
 
 /** @type {string | null} */
 let cachedLiveAppUrl = null;
+/** @type {string | null} */
+let cachedRepoUrl = null;
+const DEFAULT_REPO_URL = 'https://github.com/HatGuy68/TimeTracker';
 
 function normalizeLiveUrl(url) {
     if (!url) {
@@ -804,6 +807,35 @@ async function getAppLiveUrl() {
 
     cachedLiveAppUrl = normalizeLiveUrl(window.location.href.replace(/\/?index\.html$/, '/'));
     return cachedLiveAppUrl;
+}
+
+async function getRepoUrl() {
+    if (cachedRepoUrl) {
+        return cachedRepoUrl;
+    }
+
+    try {
+        const response = await fetch('./site.config.json');
+        if (response.ok) {
+            const config = await response.json();
+            if (config.repoUrl) {
+                cachedRepoUrl = config.repoUrl;
+                return cachedRepoUrl;
+            }
+        }
+    } catch {
+        // Ignore fetch errors in offline or extension contexts.
+    }
+
+    cachedRepoUrl = DEFAULT_REPO_URL;
+    return cachedRepoUrl;
+}
+
+async function populateRepoLink() {
+    const url = await getRepoUrl();
+    if (repoLink && url) {
+        repoLink.href = url;
+    }
 }
 
 async function populateLiveAppLink() {
@@ -944,7 +976,6 @@ clockOutButton.addEventListener('click', async () => {
 });
 
 settingsBtn.addEventListener('click', showSettings);
-liveLinkBtn.addEventListener('click', openLiveAppLink);
 settingsBackBtn.addEventListener('click', showMain);
 copyLiveLinkBtn.addEventListener('click', copyLiveAppLink);
 openLiveLinkBtn.addEventListener('click', openLiveAppLink);
@@ -1047,6 +1078,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     registerLaunchQueueConsumer();
     updateConnectionState();
     updateLiveClock();
+    await populateRepoLink();
     await populateLiveAppLink();
     await runAutoClearIfNeeded();
     await updateUI();
