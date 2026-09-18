@@ -25,6 +25,8 @@ const liveAppUrlInput = document.getElementById('live-app-url');
 const copyLiveLinkBtn = document.getElementById('copy-live-link-btn');
 const openLiveLinkBtn = document.getElementById('open-live-link-btn');
 const goalHoursInput = document.getElementById('goal-hours');
+const workDaysInput = document.getElementById('work-days');
+const dailyTargetHint = document.getElementById('daily-target-hint');
 const dataClearFrequencySelect = document.getElementById('data-clear-frequency');
 const exportDataBtn = document.getElementById('export-data-btn');
 const clearDataBtn = document.getElementById('clear-data-btn');
@@ -47,7 +49,6 @@ let liveTickTimer = null;
  *  todayClosedMinutes: number,
  *  weekClosedMinutes: number,
  *  weekRows: object[],
- *  monthClosedMinutes: number,
  *  dailyTargetMinutes: number,
  *  weeklyTargetMinutes: number,
  * }} */
@@ -57,7 +58,6 @@ let dashboard = {
     todayClosedMinutes: 0,
     weekClosedMinutes: 0,
     weekRows: [],
-    monthClosedMinutes: 0,
     dailyTargetMinutes: 8 * 60,
     weeklyTargetMinutes: 40 * 60,
 };
@@ -139,14 +139,6 @@ function getLiveWeekMinutes() {
     return total;
 }
 
-function getLiveMonthMinutes() {
-    let total = dashboard.monthClosedMinutes;
-    if (dashboard.isClockedIn && activeClockInTimestamp !== null) {
-        total += getElapsedMinutes(activeClockInTimestamp);
-    }
-    return total;
-}
-
 function sessionDurationMinutes(session, now = Date.now()) {
     if (session.clockOut) {
         return Math.max(0, Math.floor((session.clockOut - session.clockIn) / (1000 * 60)));
@@ -168,42 +160,30 @@ function getBreakMinutes(sessions, now = Date.now()) {
     return breaks;
 }
 
-function countWeekdaysInclusive(start, end) {
-    const cursor = new Date(start);
-    cursor.setHours(0, 0, 0, 0);
-    const last = new Date(end);
-    last.setHours(0, 0, 0, 0);
-    let count = 0;
-    while (cursor <= last) {
-        const day = cursor.getDay();
-        if (day !== 0 && day !== 6) {
-            count += 1;
-        }
-        cursor.setDate(cursor.getDate() + 1);
-    }
-    return count;
-}
-
 function getElapsedWorkdays(now = new Date()) {
+    const planned = settingsService.getWorkDaysPerWeek();
     const day = now.getDay();
+    let elapsed;
     if (day === 0) {
-        return 1;
+        elapsed = 1;
+    } else if (day === 6) {
+        elapsed = planned;
+    } else {
+        elapsed = day;
     }
-    if (day === 6) {
-        return 5;
-    }
-    return day;
+    return Math.min(planned, Math.max(1, elapsed));
 }
 
 function getRemainingWorkdays(now = new Date()) {
+    const planned = settingsService.getWorkDaysPerWeek();
     const day = now.getDay();
     if (day === 0) {
-        return 5;
+        return Math.max(0, planned - 1);
     }
-    if (day === 6 || day === 5) {
+    if (day === 6) {
         return 0;
     }
-    return 5 - day;
+    return Math.max(0, planned - day);
 }
 
 function setText(id, value) {
@@ -252,11 +232,9 @@ function computeMetrics() {
     const now = Date.now();
     const todayMinutes = getLiveTodayMinutes();
     const weekMinutes = getLiveWeekMinutes();
-    const monthMinutes = getLiveMonthMinutes();
     const dailyTarget = dashboard.dailyTargetMinutes;
     const weeklyTarget = dashboard.weeklyTargetMinutes;
     const remainingToday = Math.max(0, dailyTarget - todayMinutes);
-    const overtimeToday = Math.max(0, todayMinutes - dailyTarget);
     const remainingWeek = Math.max(0, weeklyTarget - weekMinutes);
     const todayPct = dailyTarget ? Math.min(100, (todayMinutes / dailyTarget) * 100) : 0;
     const weekPct = weeklyTarget ? Math.min(100, (weekMinutes / weeklyTarget) * 100) : 0;
@@ -278,16 +256,10 @@ function computeMetrics() {
     const remainingWorkdays = getRemainingWorkdays();
     const weeklyAverage = weekMinutes / Math.max(1, elapsedWorkdays);
 
-    const monthStart = new Date();
-    monthStart.setDate(1);
-    monthStart.setHours(0, 0, 0, 0);
-    const workdaysThisMonth = Math.max(1, countWeekdaysInclusive(monthStart, new Date()));
-    const monthOvertime = monthMinutes - workdaysThisMonth * dailyTarget;
-
     let pace = '—';
     let paceClass = 'tnum text-[11px] font-semibold text-slate-200';
     if (todayMinutes >= dailyTarget) {
-        pace = overtimeToday > 0 ? 'Over target' : 'Target met';
+        pace = 'Target met';
         paceClass = 'tnum text-[11px] font-semibold text-emerald-400';
     } else if (dashboard.isClockedIn) {
         const expectedHour = expectedOut ? new Date(expectedOut).getHours() : 18;
@@ -306,7 +278,6 @@ function computeMetrics() {
         todayMinutes,
         weekMinutes,
         remainingToday,
-        overtimeToday,
         remainingWeek,
         todayPct,
         weekPct,
@@ -316,7 +287,6 @@ function computeMetrics() {
         expectedOut,
         weeklyAverage,
         remainingWorkdays,
-        monthOvertime,
         pace,
         paceClass,
         sessionCount: dashboard.todaySessions.length,
@@ -366,21 +336,13 @@ function paintStatus(metrics) {
 
     setText('elapsed-display', formatDuration(metrics.todayMinutes, 'padded'));
 
-    if (metrics.overtimeToday > 0) {
-        remainingEl.textContent = `+${formatDuration(metrics.overtimeToday, 'padded')}`;
-        remainingEl.className = 'tnum text-sm font-semibold text-emerald-400 mt-0.5';
-    } else {
-        remainingEl.textContent = formatDuration(metrics.remainingToday, 'padded');
-        remainingEl.className = 'tnum text-sm font-semibold text-slate-200 mt-0.5';
-    }
+    remainingEl.textContent = formatDuration(metrics.remainingToday, 'padded');
+    remainingEl.className = 'tnum text-sm font-semibold text-slate-200 mt-0.5';
 
     setText('shift-start', metrics.shiftStart ? formatClock(metrics.shiftStart) : '—');
     setText('shift-end', metrics.expectedOut ? formatClock(metrics.expectedOut) : 'Target met');
 
-    const remainingLabel = metrics.overtimeToday > 0
-        ? `+${formatDuration(metrics.overtimeToday)} overtime`
-        : `${formatDuration(metrics.remainingToday, 'padded')} remaining`;
-    workingSinceElement.textContent = remainingLabel;
+    workingSinceElement.textContent = `${formatDuration(metrics.remainingToday, 'padded')} remaining`;
     workingSinceElement.classList.remove('hidden');
 
     const fillClass = metrics.todayPct >= 100
@@ -398,21 +360,14 @@ function paintStatus(metrics) {
 function paintStats(metrics) {
     setText('stat-worked', formatDuration(metrics.todayMinutes, 'padded'));
     setText('stat-target', formatDuration(metrics.dailyTarget, 'padded'));
-    setText(
-        'stat-remaining',
-        metrics.overtimeToday > 0
-            ? `+${formatDuration(metrics.overtimeToday)}`
-            : formatDuration(metrics.remainingToday, 'padded')
-    );
+    setText('stat-remaining', formatDuration(metrics.remainingToday, 'padded'));
     setText('stat-breaks', formatDuration(metrics.breakMinutes));
     setText('stat-sessions', String(metrics.sessionCount));
     setText('stat-efficiency', metrics.efficiency == null ? '—' : `${metrics.efficiency}%`);
 
     const remainingEl = document.getElementById('stat-remaining');
     if (remainingEl) {
-        remainingEl.className = metrics.overtimeToday > 0
-            ? 'tnum text-[15px] font-semibold text-emerald-400 mt-0.5'
-            : 'tnum text-[15px] font-semibold text-white mt-0.5';
+        remainingEl.className = 'tnum text-[15px] font-semibold text-white mt-0.5';
     }
 }
 
@@ -454,15 +409,6 @@ function paintInsights(metrics) {
         paceEl.className = metrics.paceClass;
     }
     setText('insight-done-by', metrics.expectedOut ? formatClock(metrics.expectedOut) : 'Target met');
-
-    const overtimeEl = document.getElementById('insight-overtime');
-    if (overtimeEl) {
-        const sign = metrics.monthOvertime >= 0 ? '+' : '−';
-        overtimeEl.textContent = `${sign}${formatDuration(Math.abs(metrics.monthOvertime))}`;
-        overtimeEl.className = metrics.monthOvertime >= 0
-            ? 'tnum text-[11px] font-semibold text-emerald-400'
-            : 'tnum text-[11px] font-semibold text-red-400';
-    }
 }
 
 function paintTodayChartRow(metrics) {
@@ -719,7 +665,6 @@ async function updateUI() {
     const currentSession = await timeTrackingService.getCurrentSession();
     const weekSummary = await timeTrackingService.getWeekSummary();
     const todaySummary = await timeTrackingService.getTodaySummary();
-    const monthSummary = await timeTrackingService.getMonthSummary();
 
     dashboard.isClockedIn = isClockedIn;
     dashboard.todaySessions = todaySummary?.sessions ? [...todaySummary.sessions] : [];
@@ -730,7 +675,6 @@ async function updateUI() {
         return sum + sessionDurationMinutes(session);
     }, 0);
     dashboard.weekClosedMinutes = closedMinutesFromSummaryMap(weekSummary);
-    dashboard.monthClosedMinutes = closedMinutesFromSummaryMap(monthSummary);
     dashboard.dailyTargetMinutes = settingsService.getDailyTargetMinutes();
     dashboard.weeklyTargetMinutes = settingsService.getWeeklyTargetMinutes();
 
@@ -890,6 +834,16 @@ function showMain() {
     mainView.classList.remove('hidden');
 }
 
+function updateDailyTargetHint() {
+    if (!dailyTargetHint) {
+        return;
+    }
+
+    const minutes = settingsService.getDailyTargetMinutes();
+    const days = settingsService.getWorkDaysPerWeek();
+    dailyTargetHint.textContent = `Daily target: ${formatDuration(minutes)} across ${days} day${days === 1 ? '' : 's'} · must stay under 9h`;
+}
+
 function applyHistoryView(view) {
     if (view === VIEW_SETTINGS) {
         showSettings();
@@ -934,20 +888,31 @@ function populateSettingsForm() {
     });
 
     goalHoursInput.value = String(settings.goalHours);
+    if (workDaysInput) {
+        workDaysInput.value = String(settingsService.getWorkDaysPerWeek());
+    }
     dataClearFrequencySelect.value = settings.dataClearFrequency;
+    updateDailyTargetHint();
 }
 
 function handleSettingsChange() {
     const selectedPeriod = document.querySelector('input[name="progress-period"]:checked');
-    const goalHours = Math.min(168, Math.max(1, parseInt(goalHoursInput.value, 10) || 40));
+    const clamped = settingsService.clampGoalAndDays({
+        progressPeriod: selectedPeriod?.value === 'daily' ? 'daily' : 'weekly',
+        goalHours: parseInt(goalHoursInput.value, 10),
+        workDaysPerWeek: parseInt(workDaysInput?.value, 10),
+    });
 
     settingsService.saveSettings({
-        progressPeriod: selectedPeriod?.value === 'daily' ? 'daily' : 'weekly',
-        goalHours,
+        ...clamped,
         dataClearFrequency: dataClearFrequencySelect.value,
     });
 
-    goalHoursInput.value = String(goalHours);
+    goalHoursInput.value = String(clamped.goalHours);
+    if (workDaysInput) {
+        workDaysInput.value = String(clamped.workDaysPerWeek);
+    }
+    updateDailyTargetHint();
     updateUI();
 }
 
@@ -1025,6 +990,9 @@ progressPeriodInputs.forEach(input => {
 });
 
 goalHoursInput.addEventListener('change', handleSettingsChange);
+if (workDaysInput) {
+    workDaysInput.addEventListener('change', handleSettingsChange);
+}
 dataClearFrequencySelect.addEventListener('change', handleSettingsChange);
 
 goalPresetBtns.forEach(btn => {

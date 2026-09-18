@@ -126,7 +126,8 @@ Open the gear icon in the header:
 | Setting | Description |
 |---------|-------------|
 | Progress period | Track progress against a **daily** or **weekly** goal |
-| Goal duration | Target hours (presets: 40h, 27h, or custom 1–168) |
+| Goal duration | Target hours (presets: 40h, 27h). Daily goals stay under 9h |
+| Days to complete weekly goal | How many days to spread the weekly goal across (1–7). Daily target is weekly hours ÷ days and must stay under 9h |
 | Auto-clear data | Never, daily at midnight, weekly (Sunday), or monthly (1st) |
 | Export data | Download all entries as JSON |
 | Clear all data now | Wipe IndexedDB time entries (with confirmation) |

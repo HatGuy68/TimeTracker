@@ -152,7 +152,7 @@
                     </div>
                 </section>
 
-                <section class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-2 xl:grid-cols-3 gap-1.5">
+                <section class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-2 xl:grid-cols-4 gap-1.5">
                     <div class="inline-flex items-center gap-1.5 rounded-md border border-slate-800/70 bg-[#0c1220] px-2 py-1 min-w-0">
                         <span class="text-[10px] font-bold tracking-wider text-slate-500 uppercase">Avg</span>
                         <span id="insight-avg" class="tnum text-[11px] font-semibold text-slate-200 truncate">—</span>
@@ -168,10 +168,6 @@
                     <div class="inline-flex items-center gap-1.5 rounded-md border border-slate-800/70 bg-[#0c1220] px-2 py-1 min-w-0">
                         <span class="text-[10px] font-bold tracking-wider text-slate-500 uppercase">Done by</span>
                         <span id="insight-done-by" class="tnum text-[11px] font-semibold text-slate-200 truncate">—</span>
-                    </div>
-                    <div class="inline-flex items-center gap-1.5 rounded-md border border-slate-800/70 bg-[#0c1220] px-2 py-1 min-w-0 col-span-2 sm:col-span-1 lg:col-span-2 xl:col-span-1">
-                        <span class="text-[10px] font-bold tracking-wider text-slate-500 uppercase">OT month</span>
-                        <span id="insight-overtime" class="tnum text-[11px] font-semibold text-slate-200 truncate">—</span>
                     </div>
                 </section>
             </div>
@@ -252,11 +248,17 @@
 
                         <div>
                             <label for="goal-hours" class="block text-[10px] font-bold tracking-wider text-slate-400 uppercase mb-2">Goal Duration (hours)</label>
-                            <input id="goal-hours" type="number" min="1" max="168" value="40" class="w-full bg-[#0b1220] border border-slate-700 rounded-lg px-3 py-2.5 text-white text-sm font-semibold focus:outline-none focus:border-blue-500/50" />
+                            <input id="goal-hours" type="number" min="1" max="62" value="40" class="w-full bg-[#0b1220] border border-slate-700 rounded-lg px-3 py-2.5 text-white text-sm font-semibold focus:outline-none focus:border-blue-500/50" />
                             <div class="flex gap-2 mt-2">
                                 <button type="button" data-goal-hours="40" class="goal-preset-btn text-xs font-semibold px-3 py-1.5 rounded-md bg-slate-800 text-slate-300 hover:bg-slate-700 transition-colors">40h</button>
                                 <button type="button" data-goal-hours="27" class="goal-preset-btn text-xs font-semibold px-3 py-1.5 rounded-md bg-slate-800 text-slate-300 hover:bg-slate-700 transition-colors">27h</button>
                             </div>
+                        </div>
+
+                        <div>
+                            <label for="work-days" class="block text-[10px] font-bold tracking-wider text-slate-400 uppercase mb-2">Days to complete weekly goal</label>
+                            <input id="work-days" type="number" min="1" max="7" value="5" class="w-full bg-[#0b1220] border border-slate-700 rounded-lg px-3 py-2.5 text-white text-sm font-semibold focus:outline-none focus:border-blue-500/50" />
+                            <p id="daily-target-hint" class="text-xs text-slate-500 mt-2">Daily target: 8h 00m · must stay under 9h</p>
                         </div>
 
                         <div>
