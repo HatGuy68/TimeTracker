@@ -16,10 +16,11 @@ export function getSettings() {
             return { ...DEFAULT_SETTINGS };
         }
         const parsed = JSON.parse(raw);
-        return {
+        const merged = {
             ...DEFAULT_SETTINGS,
             ...parsed,
         };
+        return { ...merged, ...clampGoalAndDays(merged) };
     } catch {
         return { ...DEFAULT_SETTINGS };
     }
@@ -30,7 +31,9 @@ export function getSettings() {
  * @returns {AppSettings}
  */
 export function saveSettings(partial) {
-    const settings = { ...getSettings(), ...partial };
+    const merged = { ...getSettings(), ...partial };
+    const clamped = clampGoalAndDays(merged);
+    const settings = { ...merged, ...clamped };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
     return settings;
 }
@@ -42,11 +45,69 @@ export function getGoalMinutes() {
     return getSettings().goalHours * 60;
 }
 
-const WORKDAYS_PER_WEEK = 5;
+export const MAX_DAILY_HOURS = 9;
+export const MIN_WORK_DAYS = 1;
+export const MAX_WORK_DAYS = 7;
 
 /**
- * Daily target in minutes. Uses the configured goal when tracking daily,
- * otherwise spreads a weekly goal across a 5-day work week.
+ * @param {number} days
+ * @returns {number}
+ */
+export function clampWorkDays(days) {
+    const value = parseInt(String(days), 10);
+    if (Number.isNaN(value)) {
+        return DEFAULT_SETTINGS.workDaysPerWeek;
+    }
+    return Math.min(MAX_WORK_DAYS, Math.max(MIN_WORK_DAYS, value));
+}
+
+/**
+ * Fewest days that keep weeklyHours / days strictly under 9h.
+ * @param {number} weeklyHours
+ * @returns {number}
+ */
+export function minWorkDaysForWeeklyHours(weeklyHours) {
+    const hours = Math.max(1, weeklyHours);
+    return Math.min(MAX_WORK_DAYS, Math.max(MIN_WORK_DAYS, Math.floor(hours / MAX_DAILY_HOURS) + 1));
+}
+
+/**
+ * @param {{ progressPeriod: 'daily' | 'weekly', goalHours: number, workDaysPerWeek: number }} values
+ * @returns {{ progressPeriod: 'daily' | 'weekly', goalHours: number, workDaysPerWeek: number }}
+ */
+export function clampGoalAndDays(values) {
+    const progressPeriod = values.progressPeriod === 'daily' ? 'daily' : 'weekly';
+    let workDaysPerWeek = clampWorkDays(values.workDaysPerWeek);
+    let goalHours = Math.max(1, parseInt(String(values.goalHours), 10) || DEFAULT_SETTINGS.goalHours);
+
+    if (progressPeriod === 'daily') {
+        goalHours = Math.min(MAX_DAILY_HOURS - 1, goalHours);
+        return { progressPeriod, goalHours, workDaysPerWeek };
+    }
+
+    const minDays = minWorkDaysForWeeklyHours(goalHours);
+    if (workDaysPerWeek < minDays) {
+        workDaysPerWeek = minDays;
+    }
+
+    const maxHours = workDaysPerWeek * MAX_DAILY_HOURS - 1;
+    if (goalHours > maxHours) {
+        goalHours = maxHours;
+    }
+
+    return { progressPeriod, goalHours, workDaysPerWeek };
+}
+
+/**
+ * @returns {number}
+ */
+export function getWorkDaysPerWeek() {
+    return clampWorkDays(getSettings().workDaysPerWeek);
+}
+
+/**
+ * Daily target in minutes. Weekly goals are split across the configured work days.
+ * Daily goals are the configured hours, capped under 9h.
  * @returns {number}
  */
 export function getDailyTargetMinutes() {
@@ -54,12 +115,11 @@ export function getDailyTargetMinutes() {
     if (settings.progressPeriod === 'daily') {
         return settings.goalHours * 60;
     }
-    return (settings.goalHours * 60) / WORKDAYS_PER_WEEK;
+    return (settings.goalHours * 60) / getWorkDaysPerWeek();
 }
 
 /**
- * Weekly target in minutes. Uses the configured goal when tracking weekly,
- * otherwise multiplies a daily goal across a 5-day work week.
+ * Weekly target in minutes. Daily goals are multiplied by the configured work days.
  * @returns {number}
  */
 export function getWeeklyTargetMinutes() {
@@ -67,7 +127,7 @@ export function getWeeklyTargetMinutes() {
     if (settings.progressPeriod === 'weekly') {
         return settings.goalHours * 60;
     }
-    return settings.goalHours * 60 * WORKDAYS_PER_WEEK;
+    return settings.goalHours * 60 * getWorkDaysPerWeek();
 }
 
 /**
