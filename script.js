@@ -875,6 +875,9 @@ async function copyLiveAppLink() {
     }
 }
 
+const VIEW_HOME = 'home';
+const VIEW_SETTINGS = 'settings';
+
 function showSettings() {
     populateSettingsForm();
     populateLiveAppLink();
@@ -885,6 +888,42 @@ function showSettings() {
 function showMain() {
     settingsView.classList.add('hidden');
     mainView.classList.remove('hidden');
+}
+
+function applyHistoryView(view) {
+    if (view === VIEW_SETTINGS) {
+        showSettings();
+        return;
+    }
+    showMain();
+}
+
+function getAppPath() {
+    return location.pathname;
+}
+
+function replaceHistoryView(view) {
+    history.replaceState({ view }, '', getAppPath());
+}
+
+function openSettings() {
+    showSettings();
+    if (history.state?.view !== VIEW_SETTINGS) {
+        history.pushState({ view: VIEW_SETTINGS }, '', getAppPath());
+    }
+}
+
+function closeSettings() {
+    if (history.state?.view === VIEW_SETTINGS) {
+        history.back();
+        return;
+    }
+    showMain();
+    replaceHistoryView(VIEW_HOME);
+}
+
+function handlePopState(event) {
+    applyHistoryView(event.state?.view === VIEW_SETTINGS ? VIEW_SETTINGS : VIEW_HOME);
 }
 
 function populateSettingsForm() {
@@ -934,6 +973,7 @@ async function clearAllDataNow() {
     activeClockInTimestamp = null;
     expandedSessionId = null;
     showMain();
+    replaceHistoryView(VIEW_HOME);
     await updateUI();
 }
 
@@ -975,8 +1015,8 @@ clockOutButton.addEventListener('click', async () => {
     await updateUI();
 });
 
-settingsBtn.addEventListener('click', showSettings);
-settingsBackBtn.addEventListener('click', showMain);
+settingsBtn.addEventListener('click', openSettings);
+settingsBackBtn.addEventListener('click', closeSettings);
 copyLiveLinkBtn.addEventListener('click', copyLiveAppLink);
 openLiveLinkBtn.addEventListener('click', openLiveAppLink);
 
@@ -1019,9 +1059,10 @@ async function handleLaunchAction() {
         return;
     }
 
-    history.replaceState(null, '', location.pathname);
+    replaceHistoryView(VIEW_HOME);
 
     if (action === 'settings') {
+        history.pushState({ view: VIEW_SETTINGS }, '', getAppPath());
         showSettings();
         return;
     }
@@ -1051,6 +1092,7 @@ async function importLaunchFile(fileHandle) {
     activeClockInTimestamp = null;
     expandedSessionId = null;
     showMain();
+    replaceHistoryView(VIEW_HOME);
     await updateUI();
 }
 
@@ -1076,6 +1118,14 @@ function registerLaunchQueueConsumer() {
 document.addEventListener('DOMContentLoaded', async () => {
     preventBrowserZoom();
     registerLaunchQueueConsumer();
+    history.replaceState({ view: VIEW_HOME }, '');
+    showMain();
+    window.addEventListener('popstate', handlePopState);
+    window.addEventListener('pageshow', (event) => {
+        if (event.persisted) {
+            handlePopState({ state: history.state });
+        }
+    });
     updateConnectionState();
     updateLiveClock();
     await populateRepoLink();
